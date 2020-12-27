@@ -1,0 +1,106 @@
+# SD读卡器使用扩充单片机存储空间
+### 一、材料准备
+我们需要提前准备的材料:  
+1、SD扩展板 * 1  
+2、SD卡,一般准备4G左右即可   
+3、0.96寸I2c接口的OLED屏幕 * 1 块  
+5、esp8266开发板 * 1块  
+6、杜邦线 * 6条  
+7、micropython开发环境(包含IDE，以及程序上传相关耗材)  
+
+### 二、SD读卡版介绍   
+从左向右依次为  
+GND  3.3v输入负极  
++5V  5v 电源输入   
+3v3  3.3v输入正级(两种电源输入,选择其中一种即可)    
+CS1  数据控制,该针脚控制小卡  
+CS2  数据控制,该针脚控制大卡  
+MOSI MOSI SPI控制数据  
+SCK  时钟频率控制   
+MISO SPI下行数据传输  
+
+### 三、连线方式  
+
+开发板和屏幕互联 
+ 
+屏幕| 开发板|GPIO
+--|--|--
+GND |GND|
+VCC	|3.3V|	
+SCL	|D4	|2
+SDA	|D3	|0
+
+开发板和SD卡版连接 
+ 
+SD板| 开发板|GPIO  
+--|--|--
+GND |GND|
+3v3	|3.3V|
+CS2	|D2	 |4
+MOSI|D5	 |14
+SCK	|D6  |12
+MISO|D7  |13
+
+
+### 用到的独立的驱动库
+1、 ssd1306.py  驱动显示显示,前几期视频已经多次演示过了  
+2、 sdcard.py  SD卡驱动程序  
+
+
+准备SD卡格式化为FAT或者FAT32都可以
+
+
+经过测试发现，ESP8266访问SD卡，打开一个文件一帧的PBM读取大约需要700毫秒，  
+我们想使用PBM文件来显示视频看来是不可行了，换ESP32的开发板,使用micropython速度  
+虽然比ESP8266快不少大约需要190毫秒左右，依然不够理想,我们还得另想途径了，  
+
+
+挂载SD卡关键代码
+```python
+# 初始化SD卡
+import sdcard
+SD_SCK = Pin(12)
+SD_MOSI = Pin(14)
+SD_MISO = Pin(14)
+SD_CS = Pin(4)
+spi = SPI(sck=SD_SCK, mosi=SD_MOSI, miso=SD_MISO)
+spi.init()
+sd = sdcard.SDCard(spi, SD_CS)
+vfs = os.VfsFat(sd)
+os.mount(vfs, "/sd")
+```
+
+
+遇到的错误解决  
+```python
+>>> os.mount(sd, '/sd')
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+  File "sdcard.py", line 237, in readblocks
+OSError: [Errno 5] EIO
+
+```
+调用函数的init,一般使用v1即可，
+
+```python
+
+>>> sd.init_card_v1()
+
+>>> sd.init_card_v2()
+
+>>> sd.init_card()
+
+
+Traceback (most recent call last):
+  File "main.py", line 44, in <module>
+OSError: [Errno 19] ENODEV
+
+
+Traceback (most recent call last):
+  File "main.py", line 44, in <module>
+  File "sdcard.py", line 239, in readblocks
+  File "sdcard.py", line 181, in readinto
+OSError: timeout waiting for response
+
+遇到以上错误，请确认线是否连接正确，是否有GPIO端口冲突
+```
