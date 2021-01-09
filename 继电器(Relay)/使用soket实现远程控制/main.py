@@ -30,16 +30,13 @@ html = """<!DOCTYPE html>
 </html>
 """
 
-# 初始化一个socket监听，监听在80端口上
-addr = socket.getaddrinfo('0.0.0.0', 80)[0][-1]
 # 生成一个Socket对象
 s = socket.socket()
 # Socket对象绑定到监听地址
-s.bind(addr)
+s.bind(('0.0.0.0', 80))
 # 开始监听数据
 s.listen(1)
 
-print('listening on', addr)
 LedState = "初始化"
 while True:
     # socket 阻塞等待外部连接进行建立
